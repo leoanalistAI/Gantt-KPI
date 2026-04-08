@@ -1,69 +1,369 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VideoRewrite AI — Substitua palavras em vídeos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
 
-{% block title %}Gantt Analyst Copilot - Gestão de Projetos{% endblock %}
+    <!-- ── Header ─────────────────────────────────────────────────────────── -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <span class="logo-icon">🎬</span>
+          <span class="logo-text">VideoRewrite <span class="logo-highlight">AI</span></span>
+        </div>
+        <p class="tagline">Analisa seu vídeo e gera um novo com as mesmas ideias — em palavras completamente diferentes</p>
+      </div>
+    </header>
 
-{% block content %}
-<header>
-    <h1>Gantt Analyst Copilot - Gestão de Projetos</h1>
-    <p>Uma ferramenta para planejamento e controle de Projetos e Metas</p>
-</header>
+    <!-- ── Phase Indicator ────────────────────────────────────────────────── -->
+    <nav class="phases-bar" id="phasesBar">
+      <div class="phase active" id="phaseStep1">
+        <div class="phase-circle"><span class="phase-num">1</span></div>
+        <div class="phase-label">Envio</div>
+      </div>
+      <div class="phase-line"></div>
+      <div class="phase" id="phaseStep2">
+        <div class="phase-circle"><span class="phase-num">2</span></div>
+        <div class="phase-label">Análise</div>
+      </div>
+      <div class="phase-line"></div>
+      <div class="phase" id="phaseStep3">
+        <div class="phase-circle"><span class="phase-num">3</span></div>
+        <div class="phase-label">Resultado</div>
+      </div>
+    </nav>
 
-<section class="gantt-section">
-    <h2>Gráfico de Gantt</h2>
-    <div class="chart-container">
-        {{ gantt_chart_html|safe }}
-    </div>
-</section>
+    <!-- ── Main ───────────────────────────────────────────────────────────── -->
+    <main class="main">
 
-<main>
-    <section class="task-form">
-        <h2>Adicionar Nova Tarefa</h2>
-        <form action="/add" method="POST">
-            <input type="text" name="name" placeholder="Nome da Tarefa" required>
-            <input type="text" name="owner" placeholder="Responsável" required>
-            <label for="start_date">Início:</label>
-            <input type="date" name="start_date" required>
-            <label for="end_date">Fim:</label>
-            <input type="date" name="end_date" required>
-            <select name="status" required>
-                <option value="Não Iniciado">Não Iniciado</option>
-                <option value="Em Andamento">Em Andamento</option>
-                <option value="Concluído">Concluído</option>
-                <option value="Atrasado">Atrasado</option>
-            </select>
-            <button type="submit">Adicionar Tarefa</button>
-        </form>
-    </section>
+      <!-- Phase 1 – Upload -->
+      <section class="phase-content" id="uploadPhase">
+        <div class="card">
+          <h2 class="card-title">Envie seu vídeo</h2>
+          <p class="card-sub">Selecione um vídeo com fala. Nossa IA transcreve o áudio, reescreve o texto com palavras diferentes e gera um novo vídeo com a mesma essência.</p>
 
-    <section class="task-list">
-        <h2>Lista de Tarefas</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Tarefa</th>
-                    <th>Responsável</th>
-                    <th>Início</th>
-                    <th>Fim</th>
-                    <th>Status</th>
-                    <th>Ação</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for task in tasks %}
-                <tr>
-                    <td>{{ task.name }}</td>
-                    <td>{{ task.owner }}</td>
-                    <td>{{ task.start_date }}</td>
-                    <td>{{ task.end_date }}</td>
-                    <td><span class="status-badge status-{{ task.status.replace(' ', '-').lower() }}">{{ task.status }}</span></td>
-                    <td>
-                        <a href="{{ url_for('update_task', id=task.id) }}" class="edit-btn">Editar</a>
-                        <a href="/delete/{{ task.id }}" class="delete-btn">Excluir</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </section>
-</main>
-{% endblock %}
+          <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept="video/*" hidden />
+            <div class="drop-icon">🎥</div>
+            <p class="drop-title">Arraste o vídeo aqui</p>
+            <p class="drop-sub">ou clique para selecionar</p>
+            <div class="drop-formats">MP4 &middot; MOV &middot; AVI &middot; MKV &middot; WEBM</div>
+          </div>
+
+          <div class="file-info hidden" id="fileInfo">
+            <span class="file-thumb">📹</span>
+            <div class="file-meta">
+              <div class="file-name" id="fileName"></div>
+              <div class="file-size" id="fileSize"></div>
+            </div>
+            <button class="file-remove" id="removeFile" title="Remover">✕</button>
+          </div>
+
+          <button class="btn-primary" id="uploadBtn" disabled>
+            Analisar Vídeo <span class="btn-arrow">→</span>
+          </button>
+
+          <div class="upload-progress hidden" id="uploadProgress">
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+            <p class="progress-label">Enviando vídeo…</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Phase 2 – Analysis -->
+      <section class="phase-content hidden" id="analysisPhase">
+        <div class="card">
+          <h2 class="card-title">Processando seu vídeo</h2>
+          <p class="card-sub">Aguarde enquanto nossa IA trabalha em cada etapa do processo.</p>
+
+          <ul class="steps-list" id="stepsList">
+            <li class="step" data-step="1">
+              <div class="step-icon-wrap">🔊</div>
+              <div class="step-body">
+                <strong>Extraindo áudio</strong>
+                <span>Separando a trilha de áudio do vídeo</span>
+              </div>
+              <div class="step-badge"></div>
+            </li>
+            <li class="step" data-step="2">
+              <div class="step-icon-wrap">📝</div>
+              <div class="step-body">
+                <strong>Transcrevendo fala</strong>
+                <span>Convertendo fala em texto com Whisper AI</span>
+              </div>
+              <div class="step-badge"></div>
+            </li>
+            <li class="step" data-step="3">
+              <div class="step-icon-wrap">✨</div>
+              <div class="step-body">
+                <strong>Reescrevendo o roteiro</strong>
+                <span>Claude AI reescreve mantendo o mesmo estilo e tom</span>
+              </div>
+              <div class="step-badge"></div>
+            </li>
+          </ul>
+
+          <div class="analysis-ticker" id="analysisTicker">Iniciando…</div>
+        </div>
+      </section>
+
+      <!-- Phase 3 – Result -->
+      <section class="phase-content hidden" id="resultPhase">
+        <div class="card">
+          <div class="result-hero">
+            <div class="result-check">✅</div>
+            <h2 class="card-title">Roteiro gerado!</h2>
+            <p class="card-sub">Análise concluída. Veja abaixo a transcrição original e o roteiro reformulado pela IA com palavras completamente diferentes.</p>
+          </div>
+
+          <div class="comparison">
+            <div class="comp-panel">
+              <div class="comp-header">
+                <span class="comp-badge original">Original</span>
+                <span class="comp-meta">Transcrição do áudio</span>
+              </div>
+              <div class="comp-body" id="originalText"></div>
+            </div>
+            <div class="comp-panel rewritten">
+              <div class="comp-header">
+                <span class="comp-badge new">Roteiro Reformulado</span>
+                <span class="comp-meta">Gerado pela IA</span>
+              </div>
+              <div class="comp-body" id="newText"></div>
+            </div>
+          </div>
+
+          <div class="result-actions">
+            <button class="btn-primary" id="copyBtn">
+              📋&nbsp; Copiar Roteiro Reformulado
+            </button>
+            <button class="btn-ghost" id="restartBtn">Analisar outro vídeo</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Error -->
+      <section class="phase-content hidden" id="errorPhase">
+        <div class="card card-error">
+          <div class="error-icon">⚠️</div>
+          <h2 class="card-title">Ocorreu um erro</h2>
+          <p class="error-msg" id="errorMsg"></p>
+          <button class="btn-ghost" id="errorRestartBtn">Tentar novamente</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Footer ─────────────────────────────────────────────────────────── -->
+    <footer class="footer">
+      Powered by <strong>Claude Opus 4.6</strong> · <strong>Whisper AI</strong>
+    </footer>
+
+  </div><!-- .app -->
+
+  <script>
+  (() => {
+    // ── State ──────────────────────────────────────────────────────────────
+    let jobId = null;
+    let pollTimer = null;
+    let selectedFile = null;
+
+    // ── DOM refs ───────────────────────────────────────────────────────────
+    const dropZone       = document.getElementById('dropZone');
+    const fileInput      = document.getElementById('fileInput');
+    const fileInfo       = document.getElementById('fileInfo');
+    const fileNameEl     = document.getElementById('fileName');
+    const fileSizeEl     = document.getElementById('fileSize');
+    const removeFileBtn  = document.getElementById('removeFile');
+    const uploadBtn      = document.getElementById('uploadBtn');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressFill   = document.getElementById('progressFill');
+    const analysisTicker = document.getElementById('analysisTicker');
+
+    // ── File selection ─────────────────────────────────────────────────────
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', e => {
+      if (e.target.files[0]) setFile(e.target.files[0]);
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      fileNameEl.textContent = file.name;
+      fileSizeEl.textContent = fmtBytes(file.size);
+      fileInfo.classList.remove('hidden');
+      dropZone.classList.add('hidden');
+      uploadBtn.disabled = false;
+    }
+
+    removeFileBtn.addEventListener('click', () => {
+      selectedFile = null;
+      fileInput.value = '';
+      fileInfo.classList.add('hidden');
+      dropZone.classList.remove('hidden');
+      uploadBtn.disabled = true;
+    });
+
+    // ── Upload ─────────────────────────────────────────────────────────────
+    uploadBtn.addEventListener('click', startUpload);
+
+    async function startUpload() {
+      if (!selectedFile) return;
+      uploadBtn.disabled = true;
+      uploadProgress.classList.remove('hidden');
+
+      // Fake progress bar while uploading
+      let pct = 0;
+      const ticker = setInterval(() => {
+        pct = Math.min(pct + Math.random() * 12, 88);
+        progressFill.style.width = pct + '%';
+      }, 250);
+
+      try {
+        const fd = new FormData();
+        fd.append('video', selectedFile);
+
+        const res  = await fetch('/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+
+        clearInterval(ticker);
+        progressFill.style.width = '100%';
+
+        if (data.error) throw new Error(data.error);
+
+        jobId = data.job_id;
+        await sleep(400);
+        showPhase('analysis');
+        startPolling();
+      } catch (err) {
+        clearInterval(ticker);
+        showError(err.message);
+      }
+    }
+
+    // ── Polling ────────────────────────────────────────────────────────────
+    function startPolling() {
+      pollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`/status/${jobId}`);
+          const job = await res.json();
+          updateSteps(job);
+          if (job.status === 'done') {
+            clearInterval(pollTimer);
+            await sleep(800);
+            showResult(job);
+          } else if (job.status === 'error') {
+            clearInterval(pollTimer);
+            showError(job.error || 'Erro desconhecido durante o processamento.');
+          }
+        } catch {
+          clearInterval(pollTimer);
+          showError('Erro de conexão com o servidor.');
+        }
+      }, 1500);
+    }
+
+    function updateSteps(job) {
+      document.querySelectorAll('.step').forEach(el => {
+        const n = parseInt(el.dataset.step, 10);
+        const badge = el.querySelector('.step-badge');
+        el.classList.remove('step-active', 'step-done');
+        badge.innerHTML = '';
+
+        if (n < job.current_step) {
+          el.classList.add('step-done');
+          badge.textContent = '✓';
+        } else if (n === job.current_step) {
+          el.classList.add('step-active');
+          badge.innerHTML = '<span class="spinner"></span>';
+        }
+      });
+      if (job.step_name) analysisTicker.textContent = job.step_name;
+    }
+
+    function showResult(job) {
+      document.getElementById('originalText').textContent = job.original_text || '—';
+      document.getElementById('newText').textContent      = job.new_text      || '—';
+      showPhase('result');
+    }
+
+    // ── Copy button ────────────────────────────────────────────────────────
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const text = document.getElementById('newText').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✅  Copiado!';
+        setTimeout(() => { btn.innerHTML = '📋&nbsp; Copiar Roteiro Reformulado'; }, 2000);
+      } catch {
+        alert('Não foi possível copiar automaticamente. Selecione o texto manualmente.');
+      }
+    });
+
+    function showError(msg) {
+      document.getElementById('errorMsg').textContent = msg;
+      showPhase('error');
+    }
+
+    // ── Phase transitions ──────────────────────────────────────────────────
+    function showPhase(name) {
+      ['upload','analysis','result','error'].forEach(p => {
+        document.getElementById(`${p}Phase`).classList.toggle('hidden', p !== name);
+      });
+
+      const map = { upload: 1, analysis: 2, result: 3, error: 2 };
+      const cur = map[name] || 1;
+
+      ['phaseStep1','phaseStep2','phaseStep3'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.classList.remove('active', 'done');
+        const n = i + 1;
+        if (n < cur)       el.classList.add('done');
+        else if (n === cur) el.classList.add('active');
+      });
+    }
+
+    // ── Restart ────────────────────────────────────────────────────────────
+    ['restartBtn','errorRestartBtn'].forEach(id => {
+      document.getElementById(id).addEventListener('click', () => {
+        clearInterval(pollTimer);
+        jobId = null;
+        selectedFile = null;
+        fileInput.value = '';
+        fileInfo.classList.add('hidden');
+        dropZone.classList.remove('hidden');
+        uploadBtn.disabled = true;
+        uploadProgress.classList.add('hidden');
+        progressFill.style.width = '0%';
+        showPhase('upload');
+      });
+    });
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function fmtBytes(b) {
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+      return (b / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+  })();
+  </script>
+</body>
+</html>
