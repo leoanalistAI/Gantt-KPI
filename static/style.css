@@ -497,6 +497,8 @@ body {
   gap: .75rem;
 }
 
+.result-actions .btn-primary { margin-top: .25rem; }
+
 /* ── Error Card ───────────────────────────────────────────────────────────── */
 .card-error { text-align: center; }
 .error-icon { font-size: 2.8rem; margin-bottom: 1rem; }

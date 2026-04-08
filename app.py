@@ -2,15 +2,13 @@ import uuid
 import subprocess
 import threading
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file, abort
+from flask import Flask, render_template, request, jsonify
 import anthropic
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = Path('uploads')
-OUTPUT_FOLDER = Path('outputs')
 UPLOAD_FOLDER.mkdir(exist_ok=True)
-OUTPUT_FOLDER.mkdir(exist_ok=True)
 
 jobs = {}
 
@@ -69,21 +67,6 @@ def get_status(job_id):
     return jsonify(job)
 
 
-@app.route('/download/<job_id>')
-def download(job_id):
-    job = jobs.get(job_id)
-    if not job or job['status'] != 'done':
-        abort(404)
-    output_path = OUTPUT_FOLDER / f'{job_id}_output.mp4'
-    if not output_path.exists():
-        abort(404)
-    return send_file(
-        str(output_path),
-        as_attachment=True,
-        download_name='video_reescrito.mp4',
-        mimetype='video/mp4',
-    )
-
 
 def update_job(job_id, **kwargs):
     if job_id in jobs:
@@ -92,7 +75,6 @@ def update_job(job_id, **kwargs):
 
 def process_video(job_id, video_path):
     audio_path = str(UPLOAD_FOLDER / f'{job_id}_audio.wav')
-    new_audio_path = str(UPLOAD_FOLDER / f'{job_id}_new_audio.mp3')
 
     try:
         # ── Etapa 1: Extrair áudio ─────────────────────────────────────────
@@ -129,7 +111,7 @@ def process_video(job_id, video_path):
 
         # ── Etapa 3: Reescrita com Claude ─────────────────────────────────
         update_job(job_id, current_step=3,
-                   step_name='Reescrevendo o texto com Claude AI...')
+                   step_name='Reescrevendo o roteiro com Claude AI...')
 
         client = anthropic.Anthropic()
         with client.messages.stream(
@@ -138,7 +120,7 @@ def process_video(job_id, video_path):
             messages=[{
                 'role': 'user',
                 'content': (
-                    'Você é um especialista em reescrita de textos. '
+                    'Você é um especialista em reescrita de roteiros. '
                     'Reescreva o texto abaixo mantendo:\n'
                     '- O mesmo estilo e tom de voz\n'
                     '- A mesma estrutura e fluxo narrativo\n'
@@ -146,7 +128,7 @@ def process_video(job_id, video_path):
                     f'- O mesmo idioma (idioma detectado: {detected_lang})\n\n'
                     'Use PALAVRAS COMPLETAMENTE DIFERENTES — como uma paráfrase elaborada e natural.\n\n'
                     f'Texto original:\n{original_text}\n\n'
-                    'Retorne APENAS o texto reescrito, sem explicações, aspas ou comentários.'
+                    'Retorne APENAS o roteiro reescrito, sem explicações, aspas ou comentários.'
                 ),
             }],
         ) as stream:
@@ -157,46 +139,13 @@ def process_video(job_id, video_path):
         ).strip()
 
         if not new_text:
-            raise RuntimeError('A IA não conseguiu gerar o texto reescrito.')
-
-        # ── Etapa 4: Síntese de voz ───────────────────────────────────────
-        update_job(job_id, current_step=4,
-                   step_name='Sintetizando nova voz...',
-                   original_text=original_text, new_text=new_text)
-
-        from gtts import gTTS  # lazy import
-        lang_map = {
-            'pt': 'pt', 'en': 'en', 'es': 'es',
-            'fr': 'fr', 'de': 'de', 'it': 'it',
-            'ja': 'ja', 'ko': 'ko', 'zh': 'zh-CN',
-        }
-        tts_lang = lang_map.get(detected_lang, 'pt')
-        gTTS(text=new_text, lang=tts_lang, slow=False).save(new_audio_path)
-
-        # ── Etapa 5: Montar vídeo final ───────────────────────────────────
-        update_job(job_id, current_step=5,
-                   step_name='Montando o vídeo final...')
-
-        output_path = str(OUTPUT_FOLDER / f'{job_id}_output.mp4')
-        r = subprocess.run(
-            ['ffmpeg',
-             '-i', video_path,
-             '-i', new_audio_path,
-             '-c:v', 'copy',
-             '-map', '0:v:0',
-             '-map', '1:a:0',
-             '-shortest',
-             output_path, '-y'],
-            capture_output=True, text=True, timeout=300,
-        )
-        if r.returncode != 0:
-            raise RuntimeError('Erro ao montar o vídeo final com o novo áudio.')
+            raise RuntimeError('A IA não conseguiu gerar o roteiro reescrito.')
 
         update_job(
             job_id,
             status='done',
-            current_step=5,
-            step_name='Concluído com sucesso!',
+            current_step=3,
+            step_name='Roteiro gerado com sucesso!',
             original_text=original_text,
             new_text=new_text,
         )
@@ -205,11 +154,10 @@ def process_video(job_id, video_path):
         update_job(job_id, status='error', error=str(exc))
 
     finally:
-        for tmp in [audio_path, new_audio_path]:
-            try:
-                Path(tmp).unlink(missing_ok=True)
-            except Exception:
-                pass
+        try:
+            Path(audio_path).unlink(missing_ok=True)
+        except Exception:
+            pass
 
 
 if __name__ == '__main__':

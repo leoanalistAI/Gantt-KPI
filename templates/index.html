@@ -103,24 +103,8 @@
             <li class="step" data-step="3">
               <div class="step-icon-wrap">✨</div>
               <div class="step-body">
-                <strong>Reescrevendo com IA</strong>
+                <strong>Reescrevendo o roteiro</strong>
                 <span>Claude AI reescreve mantendo o mesmo estilo e tom</span>
-              </div>
-              <div class="step-badge"></div>
-            </li>
-            <li class="step" data-step="4">
-              <div class="step-icon-wrap">🎙️</div>
-              <div class="step-body">
-                <strong>Sintetizando voz</strong>
-                <span>Gerando novo áudio a partir do texto reescrito</span>
-              </div>
-              <div class="step-badge"></div>
-            </li>
-            <li class="step" data-step="5">
-              <div class="step-icon-wrap">🎬</div>
-              <div class="step-body">
-                <strong>Montando vídeo final</strong>
-                <span>Combinando imagem original com o novo áudio</span>
               </div>
               <div class="step-badge"></div>
             </li>
@@ -135,8 +119,8 @@
         <div class="card">
           <div class="result-hero">
             <div class="result-check">✅</div>
-            <h2 class="card-title">Vídeo pronto!</h2>
-            <p class="card-sub">Processamento concluído. Veja abaixo a comparação entre o texto original e o reescrito.</p>
+            <h2 class="card-title">Roteiro gerado!</h2>
+            <p class="card-sub">Análise concluída. Veja abaixo a transcrição original e o roteiro reformulado pela IA com palavras completamente diferentes.</p>
           </div>
 
           <div class="comparison">
@@ -149,7 +133,7 @@
             </div>
             <div class="comp-panel rewritten">
               <div class="comp-header">
-                <span class="comp-badge new">Reescrito</span>
+                <span class="comp-badge new">Roteiro Reformulado</span>
                 <span class="comp-meta">Gerado pela IA</span>
               </div>
               <div class="comp-body" id="newText"></div>
@@ -157,10 +141,10 @@
           </div>
 
           <div class="result-actions">
-            <a class="btn-download" id="downloadBtn" href="#">
-              ⬇&nbsp; Baixar Vídeo Reescrito
-            </a>
-            <button class="btn-ghost" id="restartBtn">Processar outro vídeo</button>
+            <button class="btn-primary" id="copyBtn">
+              📋&nbsp; Copiar Roteiro Reformulado
+            </button>
+            <button class="btn-ghost" id="restartBtn">Analisar outro vídeo</button>
           </div>
         </div>
       </section>
@@ -179,7 +163,7 @@
 
     <!-- ── Footer ─────────────────────────────────────────────────────────── -->
     <footer class="footer">
-      Powered by <strong>Claude Opus 4.6</strong> · <strong>Whisper AI</strong> · <strong>gTTS</strong>
+      Powered by <strong>Claude Opus 4.6</strong> · <strong>Whisper AI</strong>
     </footer>
 
   </div><!-- .app -->
@@ -318,9 +302,21 @@
     function showResult(job) {
       document.getElementById('originalText').textContent = job.original_text || '—';
       document.getElementById('newText').textContent      = job.new_text      || '—';
-      document.getElementById('downloadBtn').href = `/download/${jobId}`;
       showPhase('result');
     }
+
+    // ── Copy button ────────────────────────────────────────────────────────
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const text = document.getElementById('newText').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✅  Copiado!';
+        setTimeout(() => { btn.innerHTML = '📋&nbsp; Copiar Roteiro Reformulado'; }, 2000);
+      } catch {
+        alert('Não foi possível copiar automaticamente. Selecione o texto manualmente.');
+      }
+    });
 
     function showError(msg) {
       document.getElementById('errorMsg').textContent = msg;
