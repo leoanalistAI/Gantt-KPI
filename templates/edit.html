@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Tarefa - Gantt Analyst Copilot{% endblock %}
+
+{% block content %}
+<header>
+    <h1>Gantt Analyst Copilot - Gestão de Projetos</h1>
+</header>
+
+<main class="edit-form-container">
+    <form action="{{ url_for('update_task', id=task.id) }}" method="POST">
+        <label for="name">Nome da Tarefa</label>
+        <input type="text" name="name" value="{{ task.name }}" required>
+
+        <label for="owner">Responsável</label>
+        <input type="text" name="owner" value="{{ task.owner }}" required>
+
+        <label for="start_date">Data de Início</label>
+        <input type="date" name="start_date" value="{{ task.start_date }}" required>
+
+        <label for="end_date">Data de Fim</label>
+        <input type="date" name="end_date" value="{{ task.end_date }}" required>
+
+        <label for="status">Status</label>
+        <select name="status" required>
+            <option value="Não Iniciado" {% if task.status == 'Não Iniciado' %}selected{% endif %}>Não Iniciado</option>
+            <option value="Em Andamento" {% if task.status == 'Em Andamento' %}selected{% endif %}>Em Andamento</option>
+            <option value="Concluído" {% if task.status == 'Concluído' %}selected{% endif %}>Concluído</option>
+            <option value="Atrasado" {% if task.status == 'Atrasado' %}selected{% endif %}>Atrasado</option>
+        </select>
+        
+        <div class="form-buttons">
+            <button type="submit" class="save-btn">Salvar Alterações</button>
+            <a href="{{ url_for('index') }}" class="cancel-btn">Cancelar</a>
+        </div>
+    </form>
+</main>
+{% endblock %}
